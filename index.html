@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ProxysVPN — запасная страница</title>
+<style>
+  :root {
+    --bg: #e0e4e8; --card: #eef1f4; --text: #2e3338; --muted: #5f646b;
+    --accent: #567671; --accent-hover: #4f6d68; --on-accent: #ffffff;
+    --ok: #116b34; --bad: #b42318; --line: #c9ced4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1f23; --card: #252a2f; --text: #e6e9ec; --muted: #a3a9b0;
+      --accent: #6b948d; --accent-hover: #7ba8a0; --on-accent: #0f1316;
+      --ok: #4cc27a; --bad: #ff6b5e; --line: #343a40;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  main { max-width: 560px; margin: 0 auto; padding: 40px 16px 56px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 19px; margin: 0 0 10px; }
+  p { margin: 0 0 12px; }
+  .lead { color: var(--muted); margin-bottom: 28px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: 0; }
+  .host { font-weight: 600; word-break: break-all; }
+  .state { color: var(--muted); white-space: nowrap; }
+  .state.ok { color: var(--ok); }
+  .state.bad { color: var(--bad); }
+  .btn {
+    display: block; text-align: center; text-decoration: none; font-weight: 600;
+    background: var(--accent); color: var(--on-accent); border-radius: 12px; padding: 14px 16px; margin-top: 12px;
+  }
+  .btn:hover { background: var(--accent-hover); }
+  .quiet { font-size: 14px; color: var(--muted); }
+  .quiet a { color: inherit; }
+  ol { margin: 0 0 4px; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ProxysVPN</h1>
+  <p class="lead">Запасная страница. Если наш сайт у вас не открывается, здесь видно почему и как всё равно подключиться.</p>
+
+  <section class="card" aria-live="polite">
+    <h2>Открывается ли наш сайт у вас</h2>
+    <div class="row"><span class="host">proxysvpn.com</span><span class="state" data-host="proxysvpn.com">проверяем…</span></div>
+    <div class="row"><span class="host">proksya.xyz</span><span class="state" data-host="proksya.xyz">проверяем…</span></div>
+    <a class="btn" id="open" href="https://proxysvpn.com" hidden>Открыть сайт</a>
+    <p class="quiet" id="none" hidden>Сайт у вас сейчас не открывается. Подключиться можно через Telegram — ниже.</p>
+  </section>
+
+  <section class="card">
+    <h2>Подключиться через Telegram</h2>
+    <ol>
+      <li>Откройте нашего бота и выберите устройство.</li>
+      <li>Нажмите «📄 Ссылки текстом» и скопируйте ссылку.</li>
+      <li>Добавьте её в приложение для VPN (Happ, v2RayTun или INCY) и включите.</li>
+    </ol>
+    <p class="quiet">После подключения наш сайт тоже откроется.</p>
+    <a class="btn" href="https://t.me/proxysvpn_bot">Открыть бота</a>
+  </section>
+
+  <p class="quiet">Вопросы — в <a href="https://t.me/proxysvpn_support_bot">поддержку</a>.</p>
+</main>
+<script>
+  // Each check asks the site for a tiny file. An answer of any kind means the site is reachable;
+  // a network error or no answer in 8 seconds means it is not.
+  (function () {
+    var rows = document.querySelectorAll("[data-host]");
+    var pending = rows.length;
+    var firstOpen = null;
+
+    function done() {
+      pending -= 1;
+      if (pending > 0) return;
+      if (firstOpen) {
+        var open = document.getElementById("open");
+        open.href = "https://" + firstOpen + "/";
+        open.hidden = false;
+      } else {
+        document.getElementById("none").hidden = false;
+      }
+    }
+
+    rows.forEach(function (el) {
+      var host = el.getAttribute("data-host");
+      var started = Date.now();
+      var ctrl = typeof AbortController === "function" ? new AbortController() : null;
+      var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 8000);
+      fetch("https://" + host + "/favicon.ico?check=" + started, {
+        mode: "no-cors", cache: "no-store", signal: ctrl ? ctrl.signal : undefined
+      }).then(function () {
+        el.textContent = "открывается, " + (Date.now() - started) + " мс";
+        el.className = "state ok";
+        if (!firstOpen) firstOpen = host;
+      }).catch(function () {
+        var spent = Date.now() - started;
+        el.textContent = spent >= 7900 ? "нет ответа" : "закрыт (" + spent + " мс)";
+        el.className = "state bad";
+      }).then(function () {
+        clearTimeout(timer);
+        done();
+      });
+    });
+  })();
+</script>
+</body>
+</html>
